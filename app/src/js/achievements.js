@@ -13,18 +13,24 @@ var getAchievement = function(id){
 
     var deffered = Q.defer();
     requests.get(dbServiceRootUrl+"/achievements/"+id, function(err, res, body){
-        body = JSON.parse(body);
         if(err){
             deffered.reject(new Error(err));
+        }else if(body == null){
+            deffered.reject(new Error("No achievement was found for id "+id));
         }else{
-            //deffered.resolve(body);
-            exercises.getExercise(body.exercise).then(function(_exercise){
+            //can't use Q.all since it returns a list of values for all deferred requests and I will not know
+            //which value is from which promise.
+            body = JSON.parse(body);
+            exercises.getExercise(body.exercise).then(function (_exercise) {
                 body.exercise = _exercise;
-                deffered.resolve(body);
+            }).then(function () {
+                categories.getCategory(body.category).then(function (_category) {
+                    body.category = _category;
+                    deffered.resolve(body);
+                })
+            }).catch(function(err){
+                    deffered.reject(err);
             });
-            //categories.getCategory(body.category).then(function(_category){
-            //    body.category = _category;
-            //});
         }
     });
     return deffered.promise;
